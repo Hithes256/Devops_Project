@@ -20,26 +20,23 @@ pipeline {
             }
         }
 
-        stage('Run Container (GREEN)') {
+        stage('Deploy Application') {
             steps {
                 bat '''
-                docker stop student-green || exit 0
-                docker rm student-green || exit 0
-                docker run -d -p 8080:80 --name student-green student-app:latest
+                docker stop student-app || exit 0
+                docker rm student-app || exit 0
+                docker run -d -p 9090:80 --name student-app student-app:latest
                 '''
-            }
-        }
-
-        stage('Health Check') {
-            steps {
-                echo "If container runs, deployment is SUCCESS"
             }
         }
     }
 
     post {
+        success {
+            echo "✅ Deployment Successful"
+        }
         failure {
-            echo "❌ Build failed – rollback simulated (BLUE)"
+            echo "❌ Build Failed"
         }
     }
 }
