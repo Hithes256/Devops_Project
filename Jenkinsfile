@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     triggers {
-        pollSCM('H/1 * * * *')
+        pollSCM('H/1 * * * *')   // checks GitHub every 1 minute
     }
 
     stages {
@@ -10,7 +10,7 @@ pipeline {
         stage('Clone Code') {
             steps {
                 git branch: 'main',
-                url: 'https://github.com/Hithes256/Devops_Project.git'
+                    url: 'https://github.com/YOUR_USERNAME/Devops_Project.git'
             }
         }
 
@@ -20,23 +20,40 @@ pipeline {
             }
         }
 
-        stage('Deploy Application') {
+        stage('Deploy GREEN') {
             steps {
                 bat '''
-                docker stop student-app || exit 0
-                docker rm student-app || exit 0
-                docker run -d -p 9090:80 --name student-app student-app:latest
+                docker rm -f green-app || exit 0
+                docker run -d -p 9090:80 --name green-app student-app:latest
+                '''
+            }
+        }
+
+        stage('Health Check') {
+            steps {
+                bat '''
+                timeout /t 5
+                curl http://localhost:9090 || exit 1
+                '''
+            }
+        }
+
+        stage('Switch Traffic') {
+            steps {
+                bat '''
+                docker rm -f blue-app || exit 0
+                docker rename green-app blue-app
                 '''
             }
         }
     }
 
     post {
-        success {
-            echo "✅ Deployment Successful"
-        }
         failure {
-            echo "❌ Build Failed"
+            bat '''
+            echo "❌ Deployment failed. Rolling back..."
+            docker rm -f green-app || exit 0
+            '''
         }
     }
 }
